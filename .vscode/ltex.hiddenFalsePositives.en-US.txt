@@ -1,0 +1,1 @@
+{"rule":"AGREEMENT_SENT_START","sentence":"^\\QCompresses images to a configurable target size (default: 2 MB)\nPreserves EXIF data when present\nSeparates photos with missing GPS metadata into a dedicated folder\nParallel processing for faster runs on multicore machines\nEstimates time for processing larger libraries\\E$"}
