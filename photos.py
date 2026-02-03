@@ -4,6 +4,15 @@ import os
 import pandas as pd
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor
+import random
+
+# Register HEIC support if available
+try:
+    import pillow_heif
+
+    pillow_heif.register_heif_opener()
+except ImportError:
+    pass
 
 
 def _exif_to_tag(exif_dict):
@@ -60,6 +69,9 @@ def _get_image_metadata(image_path) -> dict | None:
 
     except (KeyError, piexif.InvalidImageDataError):
         return None
+    except Exception:
+        # Handle HEIC and other unsupported formats gracefully
+        return None
 
 
 def _get_image_metadata_with_size(image_path) -> dict | None:
@@ -79,24 +91,44 @@ def _process_photo(
     quality_step: int = 5,
 ) -> None:
     """Compressed the photo to be under target_size_mb and copies it to the output path."""
-    with Image.open(image_path) as img:
-        # while image is larger than target size, reduce quality
-        quality = 95
-        target_size_bytes = int(target_size_mb * 1024 * 1024)
-        exif_bytes = img.info.get("exif")
+    try:
+        with Image.open(image_path) as img:
+            # Convert HEIC/HEIF to RGB if necessary
+            if img.mode in ("RGBA", "P", "LA"):
+                # Convert RGBA and palette modes to RGB
+                rgb_img = Image.new("RGB", img.size, (255, 255, 255))
+                rgb_img.paste(
+                    img, mask=img.split()[-1] if img.mode in ("RGBA", "LA") else None
+                )
+                img = rgb_img
+            elif img.mode != "RGB":
+                img = img.convert("RGB")
 
-        while True:
-            if exif_bytes:
-                exif_data = piexif.dump(piexif.load(exif_bytes))
-                img.save(output_path, quality=quality, exif=exif_data)
-            else:
-                img.save(output_path, quality=quality)
-            if (
-                os.path.getsize(output_path) <= target_size_bytes
-                or quality <= min_quality
-            ):
-                break
-            quality -= quality_step
+            # while image is larger than target size, reduce quality
+            quality = 95
+            target_size_bytes = int(target_size_mb * 1024 * 1024)
+            exif_bytes = img.info.get("exif")
+
+            while True:
+                if exif_bytes:
+                    exif_data = piexif.dump(piexif.load(exif_bytes))
+                    img.save(output_path, quality=quality, exif=exif_data)
+                else:
+                    img.save(output_path, quality=quality)
+                if (
+                    os.path.getsize(output_path) <= target_size_bytes
+                    or quality <= min_quality
+                ):
+                    break
+                quality -= quality_step
+    except Exception:
+        # If processing fails, try a simple copy with format conversion
+        try:
+            with Image.open(image_path) as img:
+                img.convert("RGB").save(output_path, quality=85)
+        except Exception:
+            # If all else fails, skip this file
+            pass
 
 
 def inspect_library(
@@ -104,8 +136,15 @@ def inspect_library(
     parallel: bool = True,
     max_workers: int | None = None,
     show_progress: bool = False,
+    sample_size: int | None = None,
 ) -> pd.DataFrame:
     image_paths = _find_all_images(dir)
+
+    # If sample_size is specified, randomly sample that many images
+    if sample_size is not None and sample_size > 0:
+        sample_size = min(sample_size, len(image_paths))
+        image_paths = random.sample(image_paths, sample_size)
+
     metadata_list = []
 
     if parallel and len(image_paths) > 1:
@@ -174,13 +213,18 @@ def process_library(
     target_size_mb: float = 2.0,
     min_quality: int = 50,
     quality_step: int = 5,
+    sample_size: int | None = None,
 ) -> None:
     """Processes the photo library by compressing images and organizing them based on GPS data."""
     os.makedirs(output_dir, exist_ok=True)
     missing_locations_dir = os.path.join(output_dir, "missing-locations")
     os.makedirs(missing_locations_dir, exist_ok=True)
     metadata = inspect_library(
-        input_dir, parallel=parallel, max_workers=max_workers, show_progress=False
+        input_dir,
+        parallel=parallel,
+        max_workers=max_workers,
+        show_progress=False,
+        sample_size=sample_size,
     )
 
     tasks = [

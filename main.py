@@ -3,17 +3,22 @@ import shutil
 import time
 from photos import inspect_library, process_library
 
-ORIGINAL_LIBRARY_DIR = "original-photos"
+ORIGINAL_LIBRARY_DIR = "iCloud Photos"
 PROCESSED_LIBRARY_DIR = "processed-photos"
-TARGET_SIZE_MB = 2.0
+TARGET_SIZE_MB = 3.0
 MIN_QUALITY = 50
 QUALITY_STEP = 5
 PARALLEL = True
 MAX_WORKERS = None
 
+# Test mode: set to a number to only process that many random photos (e.g., 50 for testing)
+TEST_MODE = None
+
 
 def main() -> None:
-    prior_metadata = inspect_library(ORIGINAL_LIBRARY_DIR, parallel=PARALLEL)
+    prior_metadata = inspect_library(
+        ORIGINAL_LIBRARY_DIR, parallel=PARALLEL, sample_size=TEST_MODE
+    )
 
     if os.path.exists(PROCESSED_LIBRARY_DIR):
         shutil.rmtree(PROCESSED_LIBRARY_DIR)
@@ -28,11 +33,14 @@ def main() -> None:
         target_size_mb=TARGET_SIZE_MB,
         min_quality=MIN_QUALITY,
         quality_step=QUALITY_STEP,
+        sample_size=TEST_MODE,
     )
     elapsed_seconds = time.perf_counter() - start_time
 
     # Report size reduction
-    posterior_metadata = inspect_library(PROCESSED_LIBRARY_DIR, parallel=PARALLEL)
+    posterior_metadata = inspect_library(
+        PROCESSED_LIBRARY_DIR, parallel=PARALLEL, sample_size=TEST_MODE
+    )
     total_size_reduction = (
         prior_metadata["image_size_mb"].sum()
         - posterior_metadata["image_size_mb"].sum()

@@ -160,15 +160,5 @@ cython_debug/
 #.idea/
 
 # All photos: .jpg, .jpeg, .JPEG, .png, .PNG, .gif, .GIF, .tif, .tiff, .TIFF, .heic, .HEIC
-*.jpg
-*.jpeg
-*.JPEG
-*.png
-*.PNG
-*.gif
-*.GIF
-*.tif
-*.tiff
-*.TIFF
-*.heic
-*.HEIC
+iCloud Photos
+processed-photos
