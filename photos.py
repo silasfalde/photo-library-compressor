@@ -160,6 +160,7 @@ def inspect_library(
     show_progress: bool = False,
     sample_size: int | None = None,
 ) -> pd.DataFrame:
+    print("Inspecting library at ", dir)
     image_paths = _find_all_images(dir)
 
     # If sample_size is specified, randomly sample that many images

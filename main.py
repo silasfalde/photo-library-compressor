@@ -11,7 +11,7 @@ QUALITY_STEP = 5
 PROCESSING_TIMEOUT_SECONDS = 3.0
 
 # Test mode: set to a number to only process that many random photos (e.g., 50 for testing)
-TEST_MODE: int | None = 100
+TEST_MODE: int | None = None
 
 
 def main() -> None:

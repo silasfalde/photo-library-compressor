@@ -162,3 +162,4 @@ cython_debug/
 # All photos: .jpg, .jpeg, .JPEG, .png, .PNG, .gif, .GIF, .tif, .tiff, .TIFF, .heic, .HEIC
 iCloud Photos
 processed-photos
+processed-photos.zip
